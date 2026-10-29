@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Painel — Achadinhos</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; background: #0b1220; color: #f4f6fa; margin: 0; padding: 24px; }
+    h1 { font-size: 22px; margin: 0 0 4px; }
+    p.sub { color: #a4b0c2; font-size: 13px; margin: 0 0 24px; }
+    .wrap { max-width: 960px; margin: 0 auto; }
+    form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: #111e30; padding: 18px; border-radius: 14px; border: 1px solid #26364b; margin-bottom: 24px; }
+    form .full { grid-column: 1 / -1; }
+    label { display: block; font-size: 12px; color: #a4b0c2; margin-bottom: 5px; }
+    input, select, textarea { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #2b3b51; background: #0d1726; color: #fff; font: inherit; }
+    textarea { resize: vertical; min-height: 60px; }
+    button { cursor: pointer; border: 0; border-radius: 8px; padding: 11px 16px; font-weight: 700; font-size: 13px; }
+    .btn-primary { background: #f8d34f; color: #172033; }
+    .btn-danger { background: #ff694b; color: #fff; padding: 6px 10px; font-size: 12px; }
+    .btn-ghost { background: #24354a; color: #fff; }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; grid-column: 1 / -1; }
+    table { width: 100%; border-collapse: collapse; background: #111e30; border-radius: 14px; overflow: hidden; border: 1px solid #26364b; }
+    th, td { padding: 10px 12px; text-align: left; font-size: 12px; border-bottom: 1px solid #26364b; vertical-align: middle; }
+    th { background: #17273b; color: #a4b0c2; font-weight: 700; }
+    td img { width: 40px; height: 40px; object-fit: contain; background: #0d1726; border-radius: 6px; }
+    .empty { text-align: center; color: #a4b0c2; padding: 30px; }
+    .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #67dfb0; color: #0b1220; padding: 10px 18px; border-radius: 9px; font-weight: 700; font-size: 13px; opacity: 0; transition: opacity .25s; pointer-events: none; }
+    .toast.show { opacity: 1; }
+    @media (max-width: 640px) { form { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Painel de Achadinhos</h1>
+    <p class="sub">Cadastre, edite e exclua produtos. Os dados ficam salvos no seu navegador (localStorage).</p>
+
+    <form id="productForm">
+      <input type="hidden" id="editIndex" value="">
+      <div class="full">
+        <label for="name">Nome do produto *</label>
+        <input id="name" required placeholder="Ex.: SSD Masterdrive 240GB...">
+      </div>
+      <div class="full">
+        <label for="description">Descrição</label>
+        <textarea id="description" placeholder="Breve descrição do achadinho"></textarea>
+      </div>
+      <div>
+        <label for="price">Preço (R$) *</label>
+        <input id="price" type="number" step="0.01" min="0" required placeholder="27.99">
+      </div>
+      <div>
+        <label for="category">Categoria</label>
+        <select id="category">
+          <option>Eletrônicos</option>
+          <option>Casa</option>
+          <option>Saúde e Beleza</option>
+          <option>Games</option>
+          <option>Acessórios</option>
+          <option>Outros</option>
+        </select>
+      </div>
+      <div>
+        <label for="image">Caminho da imagem</label>
+        <input id="image" placeholder="assets/images/produto.jpg">
+      </div>
+      <div>
+        <label for="link">Link de afiliado *</label>
+        <input id="link" type="url" required placeholder="https://meli.la/...">
+      </div>
+      <div class="actions">
+        <button class="btn-primary" type="submit" id="submitBtn">Adicionar produto</button>
+        <button class="btn-ghost" type="button" id="cancelEdit" hidden>Cancelar edição</button>
+        <button class="btn-ghost" type="button" id="exportBtn">Exportar products.js</button>
+        <button class="btn-ghost" type="button" id="clearAllBtn">Limpar tudo</button>
+      </div>
+    </form>
+
+    <table>
+      <thead>
+        <tr><th>Imagem</th><th>Nome</th><th>Categoria</th><th>Preço</th><th>Ações</th></tr>
+      </thead>
+      <tbody id="productTable"></tbody>
+    </table>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const STORAGE_KEY = "achadinhos_products";
+    const form = document.getElementById("productForm");
+    const table = document.getElementById("productTable");
+    const editIndex = document.getElementById("editIndex");
+    const submitBtn = document.getElementById("submitBtn");
+    const cancelEdit = document.getElementById("cancelEdit");
+    const toast = document.getElementById("toast");
+
+    function getProducts() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+      } catch { return []; }
+    }
+    function saveProducts(list) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+    }
+    function showToast(msg) {
+      toast.textContent = msg;
+      toast.classList.add("show");
+      setTimeout(() => toast.classList.remove("show"), 1800);
+    }
+    function formatPrice(v) {
+      return Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    }
+
+    function render() {
+      const list = getProducts();
+      if (!list.length) {
+        table.innerHTML = `<tr><td colspan="5" class="empty">Nenhum produto cadastrado ainda.</td></tr>`;
+        return;
+      }
+      table.innerHTML = list.map((p, i) => `
+        <tr>
+          <td>${p.image ? `<img src="${p.image}" alt="" onerror="this.style.display='none'">` : "—"}</td>
+          <td><strong>${p.name}</strong><br><small style="color:#a4b0c2">${p.description || ""}</small></td>
+          <td>${p.category || "—"}</td>
+          <td>${formatPrice(p.price)}</td>
+          <td>
+            <button class="btn-ghost" style="padding:6px 10px;font-size:12px" onclick="editProduct(${i})">Editar</button>
+            <button class="btn-danger" onclick="deleteProduct(${i})">Excluir</button>
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    function resetForm() {
+      form.reset();
+      editIndex.value = "";
+      submitBtn.textContent = "Adicionar produto";
+      cancelEdit.hidden = true;
+    }
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const product = {
+        name: document.getElementById("name").value.trim(),
+        description: document.getElementById("description").value.trim(),
+        price: parseFloat(document.getElementById("price").value),
+        category: document.getElementById("category").value,
+        image: document.getElementById("image").value.trim(),
+        link: document.getElementById("link").value.trim()
+      };
+      if (!product.name || isNaN(product.price) || !product.link) {
+        showToast("Preencha nome, preço e link.");
+        return;
+      }
+      const list = getProducts();
+      if (editIndex.value !== "") {
+        list[Number(editIndex.value)] = product;
+        showToast("Produto atualizado!");
+      } else {
+        list.push(product);
+        showToast("Produto adicionado!");
+      }
+      saveProducts(list);
+      resetForm();
+      render();
+    });
+
+    window.editProduct = (index) => {
+      const p = getProducts()[index];
+      if (!p) return;
+      document.getElementById("name").value = p.name;
+      document.getElementById("description").value = p.description || "";
+      document.getElementById("price").value = p.price;
+      document.getElementById("category").value = p.category || "Outros";
+      document.getElementById("image").value = p.image || "";
+      document.getElementById("link").value = p.link;
+      editIndex.value = index;
+      submitBtn.textContent = "Salvar alterações";
+      cancelEdit.hidden = false;
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+
+    window.deleteProduct = (index) => {
+      if (!confirm("Excluir este produto?")) return;
+      const list = getProducts();
+      list.splice(index, 1);
+      saveProducts(list);
+      render();
+      showToast("Produto excluído.");
+    };
+
+    cancelEdit.addEventListener("click", resetForm);
+
+    document.getElementById("exportBtn").addEventListener("click", () => {
+      const list = getProducts();
+      const js = "const products = " + JSON.stringify(list, null, 4) + ";\n\nwindow.products = products;\n";
+      const blob = new Blob([js], { type: "text/javascript" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "products.js";
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast("products.js exportado!");
+    });
+
+    document.getElementById("clearAllBtn").addEventListener("click", () => {
+      if (!confirm("Apagar TODOS os produtos cadastrados?")) return;
+      localStorage.removeItem(STORAGE_KEY);
+      render();
+      showToast("Lista limpa.");
+    });
+
+    render();
+  </script>
+</body>
+</html>
