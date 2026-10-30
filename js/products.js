@@ -18,7 +18,7 @@ const products = [
     {
         name: "SSD Masterdrive 240GB Plus Ultra-rápido SATA 3.0 400 MB/s",
         description: "SSD SATA 3.0 de 240GB com leitura de até 400 MB/s. Ideal para dar mais velocidade ao computador e reduzir o tempo de inicialização.",
-        price: 213.80,
+        price: 193.80,
         category: "Eletrônicos",
         image: "assets/images/ssd-masterdrive.jpg",
         link: "https://meli.la/2MpdFES"
