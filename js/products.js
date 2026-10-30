@@ -46,7 +46,7 @@ const products = [
         category: "Eletrônicos",
         image: "assets/images/c73.jpg",
         link: "https://meli.la/2nawCck"
-    }
+    },
 ];
 
 // Torna a lista acessível para o app.js
