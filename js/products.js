@@ -38,6 +38,14 @@ const products = [
         category: "Casa",
         image: "assets/images/rack-blue-moby.jpg",
         link: "https://meli.la/1HXPNTB"
+    },
+	{
+        name: 'Celular Smartphone Realme C73 256gb 8gb Ram Dual Sim 120hz 6000mAh Verde',
+        description: "Memória interna de 256GB.",
+        price: 1099.00, // <-- coloque o preço real do rack aqui
+        category: "Eletrônicos",
+        image: "assets/images/c73.jpg",
+        link: "https://meli.la/2nawCck"
     }
 ];
 
